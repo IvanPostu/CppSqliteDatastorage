@@ -5,7 +5,7 @@
 
 int main(int argc, char **argv){
 
-  Calculator *c = new Calculator();
+  Calculator *c = new Calculator;
   int a = 22;
   int b = 33;
 

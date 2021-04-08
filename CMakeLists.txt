@@ -30,6 +30,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 
 if (test)
+  enable_testing()
 
   # This adds another subdirectory, which has 'project(gtest)'.
   add_subdirectory( external/googletest )
