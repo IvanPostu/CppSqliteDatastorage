@@ -1,4 +1,3 @@
-enable_testing()
 
 if (APPLE)
   add_definitions(-DGTEST_USE_OWN_TR1_TUPLE)
