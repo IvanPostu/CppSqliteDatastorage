@@ -47,17 +47,11 @@ int main(int argc, char **argv)
       }
     });
 
-    // Execute(connection, "CREATE TABLE zz (ages)");
 
-    Statement insert(connection, "INSERT INTO zz (ages) VALUES (?1)");
+    Connection backupConn = Connection("build/zzqq.db");
 
-    Execute(connection, "BEGIN");
-    for (size_t i = 0; i < 1000; i++)
-    {
-      insert.Reset(i);
-      insert.Execute();
-    }
-    Execute(connection, "COMMIT");
+    Backup backup( backupConn, connection);
+
 
     Statement count(connection, "SELECT COUNT(*) FROM zz");
     count.Step();
