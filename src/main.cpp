@@ -27,37 +27,49 @@ static const char *TypeName(Type const type)
 
 int main(int argc, char **argv)
 {
+  using namespace std;
 
   try
   {
-    Connection connection = Connection::Memory();
+    // Connection connection = Connection::Memory();
 
-    Execute(connection, "CREATE TABLE Users (Id INTEGER PRIMARY KEY, Name)");
+    Connection connection("build/datastorage.db");
 
-    Execute(connection, "INSERT INTO Users (Id, Name) VALUES (?, ?)", 1, "Ion");
-    std:: cout<<"inserted: "<< connection.RowId() <<std::endl;
+    connection.Profile([](void *, char const *const statement, unsigned long long const time) {
+      unsigned long long const ms = time / 1000000;
 
-    Execute(connection, "INSERT INTO Users (Id, Name) VALUES (?, ?)", 22, "John");
-    std:: cout<<"inserted: "<< connection.RowId() <<std::endl;
+      if (ms > 10)
+      {
+        cout << "SQLite profiler: "
+             << '(' << ms << " ms) "
+             << statement
+             << endl;
+      }
+    });
 
+    // Execute(connection, "CREATE TABLE zz (ages)");
 
-    Execute(connection, "INSERT INTO Users (Id, Name) VALUES (?, ?)", 3, 7761);
+    Statement insert(connection, "INSERT INTO zz (ages) VALUES (?1)");
 
-    for (Row row : Statement(connection, "SELECT RowId, Id, Name FROM Users"))
+    Execute(connection, "BEGIN");
+    for (size_t i = 0; i < 1000; i++)
     {
-      std::cout
-          << "[" << row.GetString(0) << "] "
-          << row.GetString(1)
-          << ": "
-          << row.GetString(2)
-          << ": " << TypeName(row.GetType())
-          << std::endl;
+      insert.Reset(i);
+      insert.Execute();
     }
+    Execute(connection, "COMMIT");
+
+    Statement count(connection, "SELECT COUNT(*) FROM zz");
+    count.Step();
+
+    cout << "count: " << count.GetInt() << endl;
   }
   catch (Exception const &e)
   {
-    std::cerr << e.Message.c_str() << std::endl
-              << e.Result;
+    std::cerr << e.Message.c_str()
+              << " : "
+              << e.Result
+              << std::endl;
   }
 
   return EXIT_SUCCESS;
