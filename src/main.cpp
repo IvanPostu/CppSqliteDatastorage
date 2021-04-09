@@ -3,27 +3,8 @@
 #include <iostream>
 
 #include "_debug_utils/_debug_assert.hpp"
-#include "sqlite/SQLite.hpp"
+#include "client_cli/client_cli.h"
 
-static const char *TypeName(Type const type)
-{
-  switch (type)
-  {
-  case Type::Integer:
-    return "Integer";
-  case Type::Float:
-    return "Float";
-  case Type::Blob:
-    return "Blob";
-  case Type::Null:
-    return "Null";
-  case Type::Text:
-    return "Text";
-  }
-
-  _debug_assert(false, "TypeName is invalid !!!");
-  return "Invalid";
-}
 
 int main(int argc, char **argv)
 {
@@ -31,32 +12,53 @@ int main(int argc, char **argv)
 
   try
   {
-    // Connection connection = Connection::Memory();
 
-    Connection connection("build/datastorage.db");
+    ClientCli client = ClientCli();
 
-    connection.Profile([](void *, char const *const statement, unsigned long long const time) {
-      unsigned long long const ms = time / 1000000;
+    string dbName;
+    char c;
+    int numberOfPeoples;
 
-      if (ms > 10)
+    while (true)
+    {
+      cout << "Enter the name of a new or existing database: ";
+      cin >> dbName;
+      client.OpenNewDatabaseConnection(dbName.c_str());
+
+      cout << "How many people do you want to save to the database: ";
+      cin >> numberOfPeoples;
+
+      for (int i = 0; i < numberOfPeoples; i++)
       {
-        cout << "SQLite profiler: "
-             << '(' << ms << " ms) "
-             << statement
-             << endl;
+        string peopleName;
+        cout <<'[' << i + 1 <<"] Enter a name for the person: ";
+        cin >> peopleName;
+
+        client.SavePeople(peopleName);
       }
-    });
 
+      auto peoples = client.SelectPeoples();
+      for (string s : peoples)
+      {
+        cout << s << endl;
+      }
 
-    Connection backupConn = Connection("build/zzqq.db");
+      cout << "If you want to create backup for database, write \'y\': ";
+      cin >> c;
 
-    Backup backup( backupConn, connection);
+      if (c == 'y')
+      {
+        cout << "Enter the name of a backup database: ";
+        cin >> dbName;
+        client.CreateBackup(dbName);
+      }
 
+      cout << "If you want to exit, write \'q\' or else write any other: ";
+      cin >> c;
 
-    Statement count(connection, "SELECT COUNT(*) FROM zz");
-    count.Step();
-
-    cout << "count: " << count.GetInt() << endl;
+      if (c == 'q')
+        break;
+    }
   }
   catch (Exception const &e)
   {

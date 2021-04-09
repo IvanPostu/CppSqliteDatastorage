@@ -17,6 +17,26 @@ enum class Type
   Text = SQLITE_TEXT,
 };
 
+const char *TypeName(Type const type)
+{
+  switch (type)
+  {
+  case Type::Integer:
+    return "Integer";
+  case Type::Float:
+    return "Float";
+  case Type::Blob:
+    return "Blob";
+  case Type::Null:
+    return "Null";
+  case Type::Text:
+    return "Text";
+  }
+
+  _debug_assert(false, "TypeName is invalid !!!");
+  return "Invalid";
+}
+
 struct Exception
 {
   int Result = 0;
@@ -74,7 +94,23 @@ public:
   template <typename C>
   explicit Connection(C const *const filename)
   {
+    using namespace std;
     Open(filename);
+#ifdef NDEBUG
+#else
+    this->Profile([](void *, char const *const statement,
+                    unsigned long long const time) {
+      unsigned long long const ms = time / 1000000;
+
+      if (ms > 10)
+      {
+        cout << "SQLite profiler: "
+             << '(' << ms << " ms) "
+             << statement
+             << endl;
+      }
+    });
+#endif
   }
 
   static Connection Memory()
@@ -131,33 +167,32 @@ public:
             sourceName)),
         m_destination(&destination)
   {
-    if(!m_handle)
+    if (!m_handle)
     {
       destination.ThrowLastError();
     }
   }
 
-  sqlite3_backup * GetAbi() const noexcept
+  sqlite3_backup *GetAbi() const noexcept
   {
     return m_handle.Get();
   }
 
-  bool Step (int const pages = -1)
+  bool Step(int const pages = -1)
   {
     int rc = sqlite3_backup_step(GetAbi(), pages);
-    bool res = rc==SQLITE_OK || rc==SQLITE_BUSY || rc==SQLITE_LOCKED;
+    bool res = rc == SQLITE_OK || rc == SQLITE_BUSY || rc == SQLITE_LOCKED;
 
     return res;
   }
 
-  void CreateBackup()  noexcept
+  void CreateBackup() noexcept
   {
-    while(Step(16))
+    while (Step(16))
     {
       sqlite3_sleep(128);
     }
   }
-
 };
 
 template <typename T>
@@ -183,6 +218,11 @@ struct Reader
   {
     return static_cast<Type>(
         sqlite3_column_type(static_cast<T const *>(this)->GetAbi(), column));
+  }
+
+  std::string GetTypeStr(int const column = 0) const noexcept
+  {
+    return std::string(TypeName(GetType(column)));
   }
 };
 
@@ -402,6 +442,16 @@ void Execute(Connection const &connection,
              Values &&...values)
 {
   Statement(connection, text, std::forward<Values>(values)...).Execute();
+}
+
+void BeginTransaction(Connection const &connection)
+{
+  Statement(connection, "BEGIN");
+}
+
+void CommitTransaction(Connection const &connection)
+{
+  Statement(connection, "COMMIT");
 }
 
 #endif
